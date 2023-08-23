@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"os/user"
+	"strings"
 
 	"os"
 
@@ -16,6 +17,7 @@ type Cluster struct {
 	Project string
 	Context string
 	Region  string
+	Type    string
 }
 
 type Clusters []Cluster
@@ -43,6 +45,7 @@ func main() {
 
 	for _, cluster := range clusters {
 		fmt.Printf("\n***** %s STARTED *****\n", cluster.Name)
+
 		kubeconfigFile := fmt.Sprintf("%s/%s/%s.yaml", kubeconfigsDir, cluster.Env, cluster.Context)
 
 		if _, err := os.Stat(kubeconfigFile); !os.IsNotExist(err) {
@@ -53,27 +56,42 @@ func main() {
 			}
 		}
 
-		cmd := exec.Command("gcloud", "container", "clusters", "get-credentials", cluster.Name, "--project", cluster.Project, "--region", cluster.Region)
-		cmd.Env = os.Environ()
-		cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", kubeconfigFile))
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		fmt.Printf("command: %v\n", cmd)
-		if err := cmd.Run(); err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+		if strings.EqualFold(cluster.Type, "gke") {
+			cmd := exec.Command("gcloud", "container", "clusters", "get-credentials", cluster.Name, "--project", cluster.Project, "--region", cluster.Region)
+			cmd.Env = os.Environ()
+			cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", kubeconfigFile))
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			fmt.Printf("command: %v\n", cmd)
+			if err := cmd.Run(); err != nil {
+				fmt.Println(err.Error())
+				os.Exit(1)
+			}
+
+			defaultContextName := fmt.Sprintf("gke_%s_%s_%s", cluster.Project, cluster.Region, cluster.Name)
+			fmt.Printf("renaming default context name '%s' to '%s'", defaultContextName, cluster.Context)
+			cmd = exec.Command("kubectl", "--kubeconfig", kubeconfigFile, "config", "rename-context", defaultContextName, cluster.Context)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			fmt.Printf("command: %v\n", cmd)
+			if err := cmd.Run(); err != nil {
+				fmt.Println(err.Error())
+				os.Exit(1)
+			}
 		}
 
-		defaultContextName := fmt.Sprintf("gke_%s_%s_%s", cluster.Project, cluster.Region, cluster.Name)
-		fmt.Printf("renaming default context name '%s' to '%s'", defaultContextName, cluster.Context)
-		cmd = exec.Command("kubectl", "--kubeconfig", kubeconfigFile, "config", "rename-context", defaultContextName, cluster.Context)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		fmt.Printf("command: %v\n", cmd)
-		if err := cmd.Run(); err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
+		if strings.EqualFold(cluster.Type, "kind") {
+			cmd := exec.Command("kind", "export", "kubeconfig", "--name", cluster.Name, "--kubeconfig", kubeconfigFile)
+			cmd.Env = os.Environ()
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			fmt.Printf("command: %v\n", cmd)
+			if err := cmd.Run(); err != nil {
+				fmt.Println(err.Error())
+				os.Exit(1)
+			}
 		}
+
 		fmt.Printf("***** %s COMPLETED *****\n\n", cluster.Name)
 	}
 }

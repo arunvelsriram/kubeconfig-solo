@@ -3,3 +3,9 @@
   project: awesome-gcp-project
   context: apps-dev-cluster
   region: asia-south1
+  type: gke
+
+- env: local
+  name: my-local-cluster
+  type: kind
+  context: kind-my-local-cluster
