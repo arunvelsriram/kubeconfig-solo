@@ -1,0 +1,5 @@
+- env: dev
+  name: apps-cluster
+  project: awesome-gcp-project
+  context: apps-dev-cluster
+  region: asia-south1
