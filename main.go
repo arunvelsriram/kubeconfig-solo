@@ -43,6 +43,8 @@ func main() {
 	homeDir := user.HomeDir
 	kubeconfigsDir := fmt.Sprintf("%s/.kube/configs", homeDir)
 
+	var defaultContextName string
+
 	for _, cluster := range clusters {
 		fmt.Printf("\n***** %s STARTED *****\n", cluster.Name)
 
@@ -68,16 +70,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			defaultContextName := fmt.Sprintf("gke_%s_%s_%s", cluster.Project, cluster.Region, cluster.Name)
-			fmt.Printf("renaming default context name '%s' to '%s'", defaultContextName, cluster.Context)
-			cmd = exec.Command("kubectl", "--kubeconfig", kubeconfigFile, "config", "rename-context", defaultContextName, cluster.Context)
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			fmt.Printf("command: %v\n", cmd)
-			if err := cmd.Run(); err != nil {
-				fmt.Println(err.Error())
-				os.Exit(1)
-			}
+			defaultContextName = fmt.Sprintf("gke_%s_%s_%s", cluster.Project, cluster.Region, cluster.Name)
 		}
 
 		if strings.EqualFold(cluster.Type, "kind") {
@@ -90,6 +83,18 @@ func main() {
 				fmt.Println(err.Error())
 				os.Exit(1)
 			}
+
+			defaultContextName = fmt.Sprintf("kind-%s", cluster.Name)
+		}
+
+		fmt.Printf("renaming default context name '%s' to '%s'", defaultContextName, cluster.Context)
+		cmd := exec.Command("kubectl", "--kubeconfig", kubeconfigFile, "config", "rename-context", defaultContextName, cluster.Context)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		fmt.Printf("command: %v\n", cmd)
+		if err := cmd.Run(); err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
 		}
 
 		fmt.Printf("***** %s COMPLETED *****\n\n", cluster.Name)
