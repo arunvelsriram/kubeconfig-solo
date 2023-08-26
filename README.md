@@ -13,3 +13,11 @@ make compile
 
 kshell [env]
 ```
+
+```
+Usage of ./out/kubeconfig-solo:
+  -c string
+        create kubeconfigs for the given cluster name only
+  -e string
+        create kubeconfigs for clusters belonging to given env
+```
