@@ -1,12 +1,12 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"os"
 	"os/exec"
 	"os/user"
 	"strings"
-
-	"os"
 
 	"gopkg.in/yaml.v3"
 )
@@ -23,7 +23,12 @@ type Cluster struct {
 type Clusters []Cluster
 
 func main() {
-	configfile := os.Args[1]
+	env := flag.String("e", "", "create kubeconfigs for clusters belonging to given env")
+	clusterName := flag.String("c", "", "create kubeconfigs for the given cluster name only")
+
+	flag.Parse()
+
+	configfile := flag.Args()[0]
 	fmt.Printf("config file: %s\n", configfile)
 
 	f, err := os.ReadFile(configfile)
@@ -46,6 +51,16 @@ func main() {
 	var defaultContextName string
 
 	for _, cluster := range clusters {
+		if len(*env) != 0 && cluster.Env != *env {
+			fmt.Printf("skipping %s as it does not belong to given env %s\n", cluster.Name, *env)
+			continue
+		}
+
+		if len(*clusterName) != 0 && cluster.Name != *clusterName {
+			fmt.Printf("skipping %s as it does not match the given cluster name %s\n", cluster.Name, *clusterName)
+			continue
+		}
+
 		fmt.Printf("\n***** %s STARTED *****\n", cluster.Name)
 
 		kubeconfigFile := fmt.Sprintf("%s/%s/%s.yaml", kubeconfigsDir, cluster.Env, cluster.Context)
