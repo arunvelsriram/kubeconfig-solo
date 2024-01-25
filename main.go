@@ -18,6 +18,7 @@ type Cluster struct {
 	Context string
 	Region  string
 	Type    string
+	Proxy   string
 }
 
 type Clusters []Cluster
@@ -86,6 +87,18 @@ func main() {
 			}
 
 			defaultContextName = fmt.Sprintf("gke_%s_%s_%s", cluster.Project, cluster.Region, cluster.Name)
+
+			clusterProxyKey := fmt.Sprintf("clusters.%s.proxy-url", defaultContextName)
+			setProxyCmd := exec.Command("kubectl", "config", "set", clusterProxyKey, cluster.Proxy)
+			setProxyCmd.Env = os.Environ()
+			setProxyCmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", kubeconfigFile))
+			setProxyCmd.Stdout = os.Stdout
+			setProxyCmd.Stderr = os.Stderr
+			fmt.Printf("command: %v\n", setProxyCmd)
+			if err := setProxyCmd.Run(); err != nil {
+				fmt.Println(err.Error())
+				os.Exit(1)
+			}
 		}
 
 		if strings.EqualFold(cluster.Type, "kind") {

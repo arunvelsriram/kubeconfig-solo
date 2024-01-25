@@ -4,6 +4,7 @@
   context: apps-dev-cluster
   region: asia-south1
   type: gke
+  proxy: "https://myproxy.com"
 
 - env: local
   name: my-local-cluster
